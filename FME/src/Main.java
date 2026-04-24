@@ -1,5 +1,22 @@
 enum Unit {
-    FEET, INCH, YARD, CM
+    FEET(1.0),
+    INCH(1.0 / 12.0),
+    YARD(3.0),
+    CM(0.0328084);
+
+    double factorToFeet;
+
+    Unit(double factorToFeet) {
+        this.factorToFeet = factorToFeet;
+    }
+
+    double toFeet(double value) {
+        return value * factorToFeet;
+    }
+
+    double fromFeet(double valueInFeet) {
+        return valueInFeet / factorToFeet;
+    }
 }
 
 class QuantityLength {
@@ -7,56 +24,36 @@ class QuantityLength {
     double value;
     Unit unit;
 
-    static final double INCH_TO_FEET = 1.0 / 12.0;
-    static final double YARD_TO_FEET = 3.0;
-    static final double CM_TO_INCH = 0.393701;
-
     QuantityLength(double value, Unit unit) {
         this.value = value;
         this.unit = unit;
     }
 
-    double toFeet() {
-        switch (this.unit) {
-            case FEET:
-                return this.value;
-            case INCH:
-                return this.value * INCH_TO_FEET;
-            case YARD:
-                return this.value * YARD_TO_FEET;
-            case CM:
-                return (this.value * CM_TO_INCH) * INCH_TO_FEET;
-            default:
-                return 0;
-        }
+    double toBaseFeet() {
+        return unit.toFeet(this.value);
     }
 
-    boolean equals(QuantityLength other) {
-        return Double.compare(this.toFeet(), other.toFeet()) == 0;
-    }
-}
-
-class QuantityMeasurementApp {
-
-    public static boolean compare(double v1, Unit u1, double v2, Unit u2) {
-        QuantityLength q1 = new QuantityLength(v1, u1);
-        QuantityLength q2 = new QuantityLength(v2, u2);
-        return q1.equals(q2);
+    static double convert(double value, Unit source, Unit target) {
+        double inFeet = source.toFeet(value);
+        return target.fromFeet(inFeet);
     }
 }
 
 public class main {
     public static void main(String[] args) {
 
-        System.out.println("=== UC4 Length Comparison ===");
+        System.out.println("=== UC5 Unit Conversion ===");
 
-        System.out.println("1 Yard == 36 Inch: " +
-                QuantityMeasurementApp.compare(1.0, Unit.YARD, 36.0, Unit.INCH));
+        System.out.println("12 Inch to Feet: " +
+                QuantityLength.convert(12, Unit.INCH, Unit.FEET));
 
-        System.out.println("2 Yard == 6 Feet: " +
-                QuantityMeasurementApp.compare(2.0, Unit.YARD, 6.0, Unit.FEET));
+        System.out.println("3 Feet to Inch: " +
+                QuantityLength.convert(3, Unit.FEET, Unit.INCH));
 
-        System.out.println("100 CM == 1 Meter (approx in inches/feet logic): " +
-                QuantityMeasurementApp.compare(100.0, Unit.CM, 39.3701, Unit.INCH));
+        System.out.println("1 Yard to Feet: " +
+                QuantityLength.convert(1, Unit.YARD, Unit.FEET));
+
+        System.out.println("100 CM to Inch: " +
+                QuantityLength.convert(100, Unit.CM, Unit.INCH));
     }
 }
