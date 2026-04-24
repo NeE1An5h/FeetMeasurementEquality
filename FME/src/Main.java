@@ -1,70 +1,139 @@
-enum Unit {
-    FEET(1.0),
-    INCH(1.0 / 12.0),
-    YARD(3.0),
-    CM(0.0328084);
+enum LengthUnit {
 
-    double factorToFeet;
+FEET(1.0),
+INCHES(1.0 / 12.0),
+YARDS(3.0),
+CENTIMETERS(0.0328084);
 
-    Unit(double factorToFeet) {
-        this.factorToFeet = factorToFeet;
-    }
+private final double conversionFactorToFeet;
 
-    double toFeet(double value) {
-        return value * factorToFeet;
-    }
-
-    double fromFeet(double value) {
-        return value / factorToFeet;
-    }
+LengthUnit(double conversionFactorToFeet) {
+    this.conversionFactorToFeet = conversionFactorToFeet;
 }
 
-class QuantityLength {
+// -----------------------------
+// Base Unit = FEET
+// -----------------------------
 
-    double value;
-    Unit unit;
+public double convertToBaseUnit(double value) {
+    validate(value);
+    return value * conversionFactorToFeet;
+}
 
-    QuantityLength(double value, Unit unit) {
+public double convertFromBaseUnit(double baseValue) {
+    validate(baseValue);
+    return baseValue / conversionFactorToFeet;
+}
+
+public double getConversionFactor() {
+    return conversionFactorToFeet;
+}
+
+private void validate(double value) {
+    if (!Double.isFinite(value)) {
+        throw new IllegalArgumentException("Invalid numeric value");
+    }
+}
+}
+
+final class QuantityLength {
+
+    private final double value;
+    private final LengthUnit unit;
+
+    public QuantityLength(double value, LengthUnit unit) {
+        if (unit == null || !Double.isFinite(value)) {
+            throw new IllegalArgumentException("Invalid value or unit");
+        }
         this.value = value;
         this.unit = unit;
     }
 
-    double toFeet() {
-        return unit.toFeet(this.value);
+    // -----------------------------
+    // UC5: Convert
+    // -----------------------------
+    public QuantityLength convertTo(LengthUnit targetUnit) {
+        if (targetUnit == null) {
+            throw new IllegalArgumentException("Target unit cannot be null");
+        }
+
+        double base = unit.convertToBaseUnit(value);
+        double converted = targetUnit.convertFromBaseUnit(base);
+
+        return new QuantityLength(converted, targetUnit);
     }
 
-    static QuantityLength add(QuantityLength l1, QuantityLength l2, Unit targetUnit) {
+    // -----------------------------
+    // UC6: Add (default unit = first operand)
+    // -----------------------------
+    public QuantityLength add(QuantityLength other) {
+        return add(other, this.unit);
+    }
 
-        double l1InFeet = l1.toFeet();
-        double l2InFeet = l2.toFeet();
+    // -----------------------------
+    // UC7: Add (explicit target unit)
+    // -----------------------------
+    public QuantityLength add(QuantityLength other, LengthUnit targetUnit) {
 
-        double sumInFeet = l1InFeet + l2InFeet;
+        if (other == null || targetUnit == null) {
+            throw new IllegalArgumentException("Null not allowed");
+        }
 
-        double resultValue = targetUnit.fromFeet(sumInFeet);
+        double base1 = this.unit.convertToBaseUnit(this.value);
+        double base2 = other.unit.convertToBaseUnit(other.value);
 
-        return new QuantityLength(resultValue, targetUnit);
+        double sumBase = base1 + base2;
+
+        double result = targetUnit.convertFromBaseUnit(sumBase);
+
+        return new QuantityLength(result, targetUnit);
+    }
+
+    // -----------------------------
+    // Equality (base unit comparison)
+    // -----------------------------
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof QuantityLength)) return false;
+
+        QuantityLength other = (QuantityLength) obj;
+
+        double thisBase = this.unit.convertToBaseUnit(this.value);
+        double otherBase = other.unit.convertToBaseUnit(other.value);
+
+        return Math.abs(thisBase - otherBase) < 1e-6;
+    }
+
+    @Override
+    public String toString() {
+        return "Quantity(" + value + ", " + unit + ")";
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public LengthUnit getUnit() {
+        return unit;
     }
 }
 
-public class main {
+class QuantityMeasurementApp {
+
     public static void main(String[] args) {
 
-        System.out.println("=== UC7 Addition with Target Unit ===");
+        QuantityLength q1 = new QuantityLength(1.0, LengthUnit.FEET);
+        QuantityLength q2 = new QuantityLength(12.0, LengthUnit.INCHES);
 
-        QuantityLength length1 = new QuantityLength(1, Unit.FEET);
-        QuantityLength length2 = new QuantityLength(12, Unit.INCH);
+        System.out.println(q1.convertTo(LengthUnit.INCHES)); // 12.0
 
-        QuantityLength result1 = QuantityLength.add(length1, length2, Unit.YARD);
+        System.out.println(q1.add(q2, LengthUnit.FEET));     // 2.0 FEET
+        System.out.println(q1.add(q2, LengthUnit.INCHES));   // 24.0 INCHES
+        System.out.println(q1.add(q2, LengthUnit.YARDS));    // ~0.667 YARDS
 
-        System.out.println("1 Feet + 12 Inch in Yards = " +
-                result1.value + " " + result1.unit);
+        QuantityLength q3 = new QuantityLength(36.0, LengthUnit.INCHES);
+        QuantityLength q4 = new QuantityLength(1.0, LengthUnit.YARDS);
 
-        QuantityLength length3 = new QuantityLength(2, Unit.YARD);
-        QuantityLength length4 = new QuantityLength(36, Unit.INCH);
-
-        QuantityLength result2 = QuantityLength.add(length3, length4, Unit.FEET);
-
-        System.out.println("2 Yard + 36 Inch in Feet = " +
-                result2.value + " " + result2.unit);
+        System.out.println(q3.equals(q4)); // true
     }
 }
